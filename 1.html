@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reown Wallet Connect</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #111827;
+            color: #e5e7eb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background: #1f2937;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 400px;
+        }
+
+        h1 {
+            color: #f3f4f6;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #3b82f6;
+            color: white;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+            font-weight: 500;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #walletInfo {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #374151;
+            border-radius: 8px;
+        }
+
+        #walletAddress {
+            word-break: break-all;
+            color: #93c5fd;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        #disconnectWalletBtn {
+            background-color: #ef4444;
+        }
+
+        #disconnectWalletBtn:hover {
+            background-color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Connect Your Wallet</h1>
+        <button id="connectWalletBtn">Connect Wallet</button>
+        <div id="walletInfo" class="hidden">
+            <p>Connected Address:</p>
+            <p id="walletAddress"></p>
+            <button id="disconnectWalletBtn">Disconnect</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@walletconnect/core"></script>
+    <script src="https://unpkg.com/@reown/walletkit"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script>
+        let walletKit;
+        let account;
+
+        async function initialize() {
+            const core = new Core({
+                projectId: '4a1cab05c92439092d1de2e02714bf39'
+            });
+
+            const metadata = {
+                name: 'Reown Demo',
+                description: 'Reown WalletKit Demo',
+                url: window.location.origin,
+                icons: ['https://assets.reown.com/reown-profile-pic.png']
+            };
+
+            walletKit = await WalletKit.init({
+                core,
+                metadata
+            });
+
+            // Check if already connected
+            const sessions = walletKit.getActiveSessions();
+            if (sessions.length > 0) {
+                connect();
+            }
+        }
+
+        async function connect() {
+            try {
+                // Connect and get accounts
+                const session = await walletKit.connectWallet();
+                account = session.address;
+
+                // Update UI
+                document.getElementById('walletAddress').textContent = 
+                    `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
+                document.getElementById('walletInfo').classList.remove('hidden');
+                document.getElementById('connectWalletBtn').style.display = 'none';
+
+                // Setup session listeners
+                walletKit.on('session_update', ({ session }) => {
+                    if (session.address !== account) {
+                        account = session.address;
+                        document.getElementById('walletAddress').textContent = 
+                            `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
+                    }
+                });
+
+                walletKit.on('session_delete', () => {
+                    disconnect();
+                });
+
+            } catch (error) {
+                console.error('Error connecting:', error);
+            }
+        }
+
+        async function disconnect() {
+            if (walletKit) {
+                try {
+                    await walletKit.disconnectWallet();
+                } catch (error) {
+                    console.error('Error disconnecting:', error);
+                }
+            }
+            
+            account = null;
+            document.getElementById('walletInfo').classList.add('hidden');
+            document.getElementById('connectWalletBtn').style.display = 'block';
+        }
+
+        document.getElementById('connectWalletBtn').addEventListener('click', connect);
+        document.getElementById('disconnectWalletBtn').addEventListener('click', disconnect);
+
+        // Initialize when the page loads
+        initialize().catch(console.error);
+    </script>
+</body>
+</html>
